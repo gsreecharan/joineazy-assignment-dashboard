@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 export default function StudentDashboard({ currentUser, assignments, submissions, onSubmit }) {
   // 1. Filter assignments assigned to this specific student
@@ -6,7 +6,31 @@ export default function StudentDashboard({ currentUser, assignments, submissions
     asg.assignedTo.includes(currentUser.id)
   );
 
-  // 2. Calculate Progress
+  // 2. Search and Filter State
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+
+  // 3. Derived filtered assignments based on search and status
+  const filteredAssignments = useMemo(() => {
+    return studentAssignments.filter((asg) => {
+      const sub = submissions.find(
+        (s) => s.assignmentId === asg.id && s.studentId === currentUser.id
+      );
+      const isSubmitted = sub?.status === "Submitted";
+      const isOverdue = new Date(asg.dueDate) < new Date() && !isSubmitted;
+
+      let currentStatus = "Pending";
+      if (isSubmitted) currentStatus = "Submitted";
+      else if (isOverdue) currentStatus = "Overdue";
+
+      const matchesSearch = asg.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesFilter = statusFilter === "All" || currentStatus === statusFilter;
+
+      return matchesSearch && matchesFilter;
+    });
+  }, [studentAssignments, submissions, currentUser.id, searchQuery, statusFilter]);
+
+  // 4. Calculate Progress
   const totalAssigned = studentAssignments.length;
   const submittedCount = studentAssignments.filter((asg) => {
     const sub = submissions.find(
@@ -17,8 +41,8 @@ export default function StudentDashboard({ currentUser, assignments, submissions
 
   const progressPercentage = totalAssigned === 0 ? 0 : Math.round((submittedCount / totalAssigned) * 100);
 
-  // 3. Modal State (Two-Step Confirmation)
-  const [modalStep, setModalStep] = useState(0); // 0: Closed, 1: First Confirm, 2: Final Confirm
+  // 5. Modal State (Two-Step Confirmation)
+  const [modalStep, setModalStep] = useState(0);
   const [selectedAssignment, setSelectedAssignment] = useState(null);
 
   const initiateSubmission = (assignment) => {
@@ -63,14 +87,44 @@ export default function StudentDashboard({ currentUser, assignments, submissions
         </div>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-sm">
+        <div className="flex-1 relative">
+          <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 text-sm">
+            🔍
+          </span>
+          <input
+            type="text"
+            placeholder="Search assignments by title..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
+          />
+        </div>
+        <div className="sm:w-48">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer transition-colors"
+          >
+            <option value="All">All Statuses</option>
+            <option value="Pending">Pending</option>
+            <option value="Submitted">Submitted</option>
+            <option value="Overdue">Overdue</option>
+          </select>
+        </div>
+      </div>
+
       {/* Assignment Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {studentAssignments.length === 0 ? (
-          <div className="col-span-full p-8 text-center text-slate-500 border border-slate-800 border-dashed rounded-xl">
-            No assignments assigned to you yet.
+        {filteredAssignments.length === 0 ? (
+          <div className="col-span-full p-8 text-center text-slate-500 border border-slate-800 border-dashed rounded-xl bg-slate-900/40">
+            {studentAssignments.length === 0 
+              ? "No assignments assigned to you yet." 
+              : "No assignments found matching your search/filter criteria."}
           </div>
         ) : (
-          studentAssignments.map((asg) => {
+          filteredAssignments.map((asg) => {
             const sub = submissions.find(
               (s) => s.assignmentId === asg.id && s.studentId === currentUser.id
             );
