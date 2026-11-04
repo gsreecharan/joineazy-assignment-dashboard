@@ -9,7 +9,7 @@ import StudentDashboard from "./components/StudentDashboard";
 import AdminDashboard from "./components/AdminDashboard";
 
 export default function App() {
-  const [users] = useLocalStorage("joineazy_users", INITIAL_USERS);
+  const [users, setUsers] = useLocalStorage("joineazy_users", INITIAL_USERS);
   const [assignments, setAssignments] = useLocalStorage(
     "joineazy_assignments",
     INITIAL_ASSIGNMENTS
@@ -25,7 +25,17 @@ export default function App() {
 
   const currentUser = users.find((u) => u.id === currentUserId) || users[0];
 
-  // 1. Student Submission Handler (2-step confirmed)
+  // Reset all state to seed defaults
+  const handleResetData = () => {
+    if (window.confirm("Reset all assignments and submissions back to initial demo data?")) {
+      setUsers(INITIAL_USERS);
+      setAssignments(INITIAL_ASSIGNMENTS);
+      setSubmissions(INITIAL_SUBMISSIONS);
+      setCurrentUserId(INITIAL_USERS[2].id);
+    }
+  };
+
+  // Student Submission Handler (2-step confirmed)
   const handleStudentSubmit = (assignmentId, studentId) => {
     setSubmissions((prevSubmissions) => {
       const filtered = prevSubmissions.filter(
@@ -43,15 +53,13 @@ export default function App() {
     });
   };
 
-  // 2. Admin Create / Update Assignment Handler
+  // Admin Create / Update Handler
   const handleSaveAssignment = (assignmentData) => {
     if (assignmentData.id) {
-      // Edit existing assignment
       setAssignments((prev) =>
         prev.map((asg) => (asg.id === assignmentData.id ? assignmentData : asg))
       );
     } else {
-      // Create new assignment
       const newId = `asg-${Date.now()}`;
       const newAssignment = {
         ...assignmentData,
@@ -60,7 +68,6 @@ export default function App() {
 
       setAssignments((prev) => [...prev, newAssignment]);
 
-      // Seed initial Pending submissions for each targeted student
       const newSubmissions = assignmentData.assignedTo.map((studentId) => ({
         assignmentId: newId,
         studentId,
@@ -72,7 +79,7 @@ export default function App() {
     }
   };
 
-  // 3. Admin Delete Assignment Handler
+  // Admin Delete Handler
   const handleDeleteAssignment = (assignmentId) => {
     setAssignments((prev) => prev.filter((asg) => asg.id !== assignmentId));
     setSubmissions((prev) =>
@@ -86,10 +93,10 @@ export default function App() {
         users={users}
         currentUser={currentUser}
         onSelectUser={setCurrentUserId}
+        onResetData={handleResetData}
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Workspace Banner */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
@@ -119,7 +126,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Dynamic Role View */}
         {currentUser.role === "student" ? (
           <StudentDashboard
             currentUser={currentUser}

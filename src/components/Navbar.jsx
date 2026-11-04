@@ -1,11 +1,11 @@
-export default function Navbar({ users, currentUser, onSelectUser }) {
+export default function Navbar({ users, currentUser, onSelectUser, onResetData }) {
   const admins = users.filter((u) => u.role === "admin");
   const students = users.filter((u) => u.role === "student");
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        {/* Brand / Logo */}
+        {/* Brand */}
         <div className="flex items-center gap-3">
           <div className="h-9 w-9 rounded-lg bg-indigo-600 flex items-center justify-center font-bold text-lg shadow-sm">
             J
@@ -20,12 +20,18 @@ export default function Navbar({ users, currentUser, onSelectUser }) {
           </div>
         </div>
 
-        {/* Current Active User Badge & Role Switcher */}
+        {/* User Switcher & Reset Button */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={onResetData}
+            title="Reset to default seed data"
+            className="px-2.5 py-1.5 text-xs font-medium text-slate-400 hover:text-slate-200 bg-slate-800/80 hover:bg-slate-800 rounded-lg border border-slate-700/60 transition-colors"
+          >
+            🔄 <span className="hidden sm:inline">Reset Demo</span>
+          </button>
+
           <div className="text-right hidden md:block">
-            <p className="text-sm font-medium text-slate-200">
-              {currentUser.name}
-            </p>
+            <p className="text-sm font-medium text-slate-200">{currentUser.name}</p>
             <span
               className={`text-xs uppercase font-semibold px-2 py-0.5 rounded-full ${
                 currentUser.role === "admin"
@@ -37,7 +43,6 @@ export default function Navbar({ users, currentUser, onSelectUser }) {
             </span>
           </div>
 
-          {/* Switcher Select Dropdown */}
           <div className="relative">
             <select
               value={currentUser.id}
