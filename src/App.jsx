@@ -6,6 +6,7 @@ import {
 } from "./data/seedData";
 import Navbar from "./components/Navbar";
 import StudentDashboard from "./components/StudentDashboard";
+import AdminDashboard from "./components/AdminDashboard";
 
 export default function App() {
   const [users] = useLocalStorage("joineazy_users", INITIAL_USERS);
@@ -22,17 +23,14 @@ export default function App() {
     INITIAL_USERS[2].id // Default to student-1 ("Charan")
   );
 
-  const currentUser =
-    users.find((u) => u.id === currentUserId) || users[0];
+  const currentUser = users.find((u) => u.id === currentUserId) || users[0];
 
-  // Handler for the two-step student submission
+  // 1. Student Submission Handler (2-step confirmed)
   const handleStudentSubmit = (assignmentId, studentId) => {
     setSubmissions((prevSubmissions) => {
-      // Remove any existing pending record for this specific student + assignment combo
       const filtered = prevSubmissions.filter(
         (s) => !(s.assignmentId === assignmentId && s.studentId === studentId)
       );
-      // Append the new "Submitted" record
       return [
         ...filtered,
         {
@@ -45,6 +43,43 @@ export default function App() {
     });
   };
 
+  // 2. Admin Create / Update Assignment Handler
+  const handleSaveAssignment = (assignmentData) => {
+    if (assignmentData.id) {
+      // Edit existing assignment
+      setAssignments((prev) =>
+        prev.map((asg) => (asg.id === assignmentData.id ? assignmentData : asg))
+      );
+    } else {
+      // Create new assignment
+      const newId = `asg-${Date.now()}`;
+      const newAssignment = {
+        ...assignmentData,
+        id: newId,
+      };
+
+      setAssignments((prev) => [...prev, newAssignment]);
+
+      // Seed initial Pending submissions for each targeted student
+      const newSubmissions = assignmentData.assignedTo.map((studentId) => ({
+        assignmentId: newId,
+        studentId,
+        status: "Pending",
+        submittedAt: null,
+      }));
+
+      setSubmissions((prev) => [...prev, ...newSubmissions]);
+    }
+  };
+
+  // 3. Admin Delete Assignment Handler
+  const handleDeleteAssignment = (assignmentId) => {
+    setAssignments((prev) => prev.filter((asg) => asg.id !== assignmentId));
+    setSubmissions((prev) =>
+      prev.filter((sub) => sub.assignmentId !== assignmentId)
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
       <Navbar
@@ -54,7 +89,8 @@ export default function App() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm">
+        {/* Workspace Banner */}
+        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-sm mb-6">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div>
               <h2 className="text-2xl font-bold text-white">
@@ -75,12 +111,15 @@ export default function App() {
                   : "bg-emerald-950 text-emerald-300 border-emerald-800"
               }`}
             >
-              Active Workspace: {currentUser.role === "admin" ? "Admin Management" : "Student Portal"}
+              Active Workspace:{" "}
+              {currentUser.role === "admin"
+                ? "Admin Management"
+                : "Student Portal"}
             </span>
           </div>
         </div>
 
-        {/* Dynamic Role Rendering */}
+        {/* Dynamic Role View */}
         {currentUser.role === "student" ? (
           <StudentDashboard
             currentUser={currentUser}
@@ -89,9 +128,14 @@ export default function App() {
             onSubmit={handleStudentSubmit}
           />
         ) : (
-          <div className="p-8 border border-dashed border-slate-800 rounded-xl text-center text-slate-500">
-            Admin dashboard for <strong className="text-slate-300">{currentUser.name}</strong> will render here next.
-          </div>
+          <AdminDashboard
+            currentUser={currentUser}
+            users={users}
+            assignments={assignments}
+            submissions={submissions}
+            onSaveAssignment={handleSaveAssignment}
+            onDeleteAssignment={handleDeleteAssignment}
+          />
         )}
       </main>
     </div>
