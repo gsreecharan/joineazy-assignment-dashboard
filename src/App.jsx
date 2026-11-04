@@ -5,6 +5,7 @@ import {
   INITIAL_SUBMISSIONS,
 } from "./data/seedData";
 import Navbar from "./components/Navbar";
+import StudentDashboard from "./components/StudentDashboard";
 
 export default function App() {
   const [users] = useLocalStorage("joineazy_users", INITIAL_USERS);
@@ -23,6 +24,26 @@ export default function App() {
 
   const currentUser =
     users.find((u) => u.id === currentUserId) || users[0];
+
+  // Handler for the two-step student submission
+  const handleStudentSubmit = (assignmentId, studentId) => {
+    setSubmissions((prevSubmissions) => {
+      // Remove any existing pending record for this specific student + assignment combo
+      const filtered = prevSubmissions.filter(
+        (s) => !(s.assignmentId === assignmentId && s.studentId === studentId)
+      );
+      // Append the new "Submitted" record
+      return [
+        ...filtered,
+        {
+          assignmentId,
+          studentId,
+          status: "Submitted",
+          submittedAt: new Date().toISOString(),
+        },
+      ];
+    });
+  };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
@@ -59,10 +80,19 @@ export default function App() {
           </div>
         </div>
 
-        {/* Temporary Placeholder - Next steps will replace this with role-specific dashboards */}
-        <div className="mt-6 p-8 border border-dashed border-slate-800 rounded-xl text-center text-slate-500">
-          Role-specific dashboard for <strong className="text-slate-300">{currentUser.name}</strong> will render here next.
-        </div>
+        {/* Dynamic Role Rendering */}
+        {currentUser.role === "student" ? (
+          <StudentDashboard
+            currentUser={currentUser}
+            assignments={assignments}
+            submissions={submissions}
+            onSubmit={handleStudentSubmit}
+          />
+        ) : (
+          <div className="p-8 border border-dashed border-slate-800 rounded-xl text-center text-slate-500">
+            Admin dashboard for <strong className="text-slate-300">{currentUser.name}</strong> will render here next.
+          </div>
+        )}
       </main>
     </div>
   );
